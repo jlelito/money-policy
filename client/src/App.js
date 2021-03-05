@@ -6,6 +6,7 @@ import Count from './abis/Count.json';
 import Notification from './components/Notification.js';
 import Loading from './components/Loading.js';
 import ConnectionBanner from '@rimble/connection-banner';
+require('dotenv').config();
 
 class App extends Component {
 
@@ -13,120 +14,121 @@ class App extends Component {
     await this.loadBlockchainData()
   }
 
-//Loads all the blockchain data
-async loadBlockchainData() {
-  let web3
-  
-  this.setState({loading: true})
-  if(typeof window.ethereum !== 'undefined') {
-    web3 = new Web3(window.ethereum)
-    await this.setState({web3})
-    await this.loadAccountData()
-  } else {
-    web3 = new Web3(new Web3.providers.HttpProvider(`https://ropsten.infura.io/v3/${process.env.INFURA_API_KEY}`))
-    await this.setState({web3})
-  }
-  this.loadContractData()
-  this.setState({loading: false})
-}
-
-//Loads user account data
-async loadAccountData() {
-  let web3 = new Web3(window.ethereum) 
-  const accounts = await this.state.web3.eth.getAccounts()
-  if(typeof accounts[0] !== 'undefined' && accounts[0] !== null) {
-    let currentEthBalance = await this.state.web3.eth.getBalance(accounts[0])
-    currentEthBalance = this.state.web3.utils.fromWei(currentEthBalance, 'Ether')
-    await this.setState({account: accounts[0], currentEthBalance, isConnected: true})
-  } else {
-    await this.setState({account: null, isConnected: false})
-  }
-
-  const networkId = await web3.eth.net.getId()
-  this.setState({network: networkId})
-
-  if(this.state.network !== 3) {
-    this.setState({wrongNetwork: true})
-  }
-}
-
-//Loads the data of the smart-contract
-async loadContractData() {
-  let contractAdmin
-  let CountData = Count.networks[5777]
-  if(CountData) {
+  //Loads all the blockchain data
+  async loadBlockchainData() {
+    let web3
     
-    const abi = Count.abi
-    const address = CountData.address
-    //Load contract and set state
-    const tokenContract = new this.state.web3.eth.Contract(abi, address)
-    await this.setState({ contract : tokenContract })
-    console.log('Count contract:', this.state.contract)
-    console.log('Getting admin')
-    contractAdmin = await this.state.contract.methods.admin().call()
-    console.log('Admin:', contractAdmin)
-    this.setState({  admin: contractAdmin })
-    let count = await this.state.contract.methods.count().call()
-    this.setState({count})
+    this.setState({loading: true})
+    if(typeof window.ethereum !== 'undefined') {
+      web3 = new Web3(window.ethereum)
+      await this.setState({web3})
+      await this.loadAccountData()
+    } else {
+      web3 = new Web3(new Web3.providers.HttpProvider(`https://ropsten.infura.io/v3/${REACT_APP_INFURA_API_KEY}`))
+      await this.setState({web3})
+    }
+    this.loadContractData()
+    this.setState({loading: false})
   }
 
-}
-
-//Shows notification
-showNotification = () => {
-  this.notificationOne.current.updateShowNotify()
-}
-
-//Increments the Count
-async increment() {
-  try {
-    this.state.contract.methods.increment().send({ from: this.state.account }).on('transactionHash', async (hash) => {
-       this.setState({hash: hash, action: 'Count Incremented', trxStatus: 'Pending'})
-       this.showNotification()
-
-      }).on('receipt', async (receipt) => {
-          await this.loadContractData()
-          if(receipt.status === true){
-            this.setState({trxStatus: 'Success'})
-          }
-          else if(receipt.status === false){
-            this.setState({trxStatus: 'Failed'})
-          }
-      }).on('error', (error) => {
-          window.alert('Error! Could not increment!')
-      }).on('confirmation', (confirmNum) => {
-          if(confirmNum > 10) {
-            this.setState({confirmNum : '10+'})
-          } else {
-          this.setState({confirmNum})
-          }
-      })
+  //Loads user account data
+  async loadAccountData() {
+    let web3 = new Web3(window.ethereum) 
+    const accounts = await this.state.web3.eth.getAccounts()
+    if(typeof accounts[0] !== 'undefined' && accounts[0] !== null) {
+      let currentEthBalance = await this.state.web3.eth.getBalance(accounts[0])
+      currentEthBalance = this.state.web3.utils.fromWei(currentEthBalance, 'Ether')
+      await this.setState({account: accounts[0], currentEthBalance, isConnected: true})
+    } else {
+      await this.setState({account: null, isConnected: false})
     }
-    catch(e) {
-      window.alert(e)
-    }
-}
 
-constructor(props) {
-  super(props)
-  this.notificationOne = React.createRef()
-  this.state = {
-    web3: null,
-    account: null,
-    admin:'0x0',
-    network: null,
-    wrongNetwork: false,
-    loading: false,
-    isConnected: null,
-    contract: {},
-    count: null,
-    currentEthBalance: '0',
-    hash: '0x0',
-    action: null,
-    trxStatus: null,
-    confirmNum: 0
+    const networkId = await web3.eth.net.getId()
+    this.setState({network: networkId})
+
+    if(this.state.network !== 3) {
+        let web3
+        this.setState({wrongNetwork: true})
+        let infuraURL = `https://ropsten.infura.io/v3/${process.env.REACT_APP_INFURA_API_KEY}`
+        web3 = new Web3(new Web3.providers.HttpProvider(infuraURL))
+        await this.setState({web3})
+    }
   }
-}
+
+  //Loads the data of the smart-contract
+  async loadContractData() {
+    let contractAdmin
+    let CountData = Count.networks[5777]
+    if(CountData) {
+
+      //Load contract and set state
+      const abi = Count.abi
+      const address = CountData.address
+      const tokenContract = new this.state.web3.eth.Contract(abi, address)
+      await this.setState({ contract : tokenContract })
+
+      contractAdmin = await this.state.contract.methods.admin().call()
+      let count = await this.state.contract.methods.count().call()
+      this.setState({count, admin: contractAdmin})
+    }
+
+  }
+
+  //Shows notification
+  showNotification = () => {
+    this.notificationOne.current.updateShowNotify()
+  }
+
+  //Increments the Count
+  async increment() {
+    try {
+      this.state.contract.methods.increment().send({ from: this.state.account }).on('transactionHash', async (hash) => {
+        this.setState({hash: hash, action: 'Count Incremented', trxStatus: 'Pending'})
+        this.showNotification()
+
+        }).on('receipt', async (receipt) => {
+            await this.loadContractData()
+            if(receipt.status === true){
+              this.setState({trxStatus: 'Success'})
+            }
+            else if(receipt.status === false){
+              this.setState({trxStatus: 'Failed'})
+            }
+        }).on('error', (error) => {
+            window.alert('Error! Could not increment!')
+        }).on('confirmation', (confirmNum) => {
+            if(confirmNum > 10) {
+              this.setState({confirmNum : '10+'})
+            } else {
+            this.setState({confirmNum})
+            }
+        })
+      }
+      catch(e) {
+        window.alert(e)
+      }
+  }
+
+  constructor(props) {
+    super(props)
+    this.notificationOne = React.createRef()
+    this.state = {
+      web3: null,
+      account: null,
+      admin:'0x0',
+      network: null,
+      wrongNetwork: false,
+      loading: false,
+      isConnected: null,
+      contract: {},
+      count: null,
+      currentEthBalance: '0',
+      hash: '0x0',
+      action: null,
+      trxStatus: null,
+      confirmNum: 0
+    }
+  }
 
   render() {
 
