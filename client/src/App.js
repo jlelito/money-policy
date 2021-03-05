@@ -24,7 +24,7 @@ class App extends Component {
       await this.setState({web3})
       await this.loadAccountData()
     } else {
-      web3 = new Web3(new Web3.providers.HttpProvider(`https://ropsten.infura.io/v3/${REACT_APP_INFURA_API_KEY}`))
+      web3 = new Web3(new Web3.providers.HttpProvider(`https://ropsten.infura.io/v3/${process.env.REACT_APP_INFURA_API_KEY}`))
       await this.setState({web3})
     }
     this.loadContractData()
@@ -58,7 +58,7 @@ class App extends Component {
   //Loads the data of the smart-contract
   async loadContractData() {
     let contractAdmin
-    let CountData = Count.networks[5777]
+    let CountData = Count.networks[3]
     if(CountData) {
 
       //Load contract and set state
@@ -82,6 +82,7 @@ class App extends Component {
   //Increments the Count
   async increment() {
     try {
+      this.setState({confirmNum: 0})
       this.state.contract.methods.increment().send({ from: this.state.account }).on('transactionHash', async (hash) => {
         this.setState({hash: hash, action: 'Count Incremented', trxStatus: 'Pending'})
         this.showNotification()
@@ -155,8 +156,11 @@ class App extends Component {
           balance={this.state.currentEthBalance}
           network={this.state.network}
           isConnected={this.state.isConnected}
+          trxStatus={this.state.trxStatus}
         />
+
         <div className='mt-5' />
+
         {window.ethereum === null ?
           <ConnectionBanner className='mt-5' currentNetwork={this.state.network} requiredNetwork={3} onWeb3Fallback={true} />
           :
@@ -165,26 +169,26 @@ class App extends Component {
           null
         }
           
-         {this.state.loading ?
-          <Loading /> 
-          :
-          <>
-          <Notification 
-            showNotification={this.state.showNotification}
-            action={this.state.action}
-            hash={this.state.hash}
-            ref={this.notificationOne}
-            trxStatus={this.state.trxStatus}
-            confirmNum={this.state.confirmNum}
-          />
-          <div className='row mt-1'></div>
-          <h1 className='mt-2' id='title'>Counter</h1>
-          <h1>Admin: {this.state.admin}</h1>
-          <h2>Count: {this.state.count} </h2>
-          <button onClick={() => this.increment()}>Increment</button>
-        </>
-        }
-      </div>
+      {this.state.loading ?
+        <Loading /> 
+        :
+        <>
+        <Notification 
+          showNotification={this.state.showNotification}
+          action={this.state.action}
+          hash={this.state.hash}
+          ref={this.notificationOne}
+          trxStatus={this.state.trxStatus}
+          confirmNum={this.state.confirmNum}
+        />
+        <div className='row mt-1'></div>
+        <h1 className='mt-2' id='title'>Counter</h1>
+        <h1>Admin: {this.state.admin}</h1>
+        <h2>Count: {this.state.count} </h2>
+        <button className='btn btn-primary' onClick={() => this.increment()}>Increment</button>
+      </>
+      }
+    </div>
     );
   }
 }
