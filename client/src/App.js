@@ -3,7 +3,6 @@ import React, { Component } from 'react';
 import Web3 from 'web3';
 import Navbar from './components/Navbar.js';
 import Count from './abis/Count.json';
-import ContractCaller from './abis/ContractCaller.json';
 import Notification from './components/Notification.js';
 import Loading from './components/Loading.js';
 import ConnectionBanner from '@rimble/connection-banner';
@@ -53,7 +52,6 @@ class App extends Component {
   async loadContractData() {
     let contractAdmin
     let CountData = Count.networks[5777]
-    let ContractCallerData = ContractCaller.networks[5777]
     if(CountData) {
 
       //Load contract and set state
@@ -67,16 +65,6 @@ class App extends Component {
       this.setState({count, admin: contractAdmin, countContractAddress: address})
     }
 
-    //Get other contract data
-    if(ContractCallerData) {
-
-      //Load contract and set state
-      const abi = ContractCaller.abi
-      const address = ContractCallerData.address
-      const countContract = new this.state.web3.eth.Contract(abi, address)
-      await this.setState({ callerContract : countContract })
-
-    }
 
   }
 
@@ -89,8 +77,8 @@ class App extends Component {
   async increment() {
     try {
       this.setState({confirmNum: 0})
-      this.state.callerContract.methods.incrementsCount(this.state.countContractAddress).send({ from: this.state.account }).on('transactionHash', async (hash) => {
-        this.setState({hash: hash, action: 'Count Incremented from other Contract', trxStatus: 'Pending'})
+      this.state.countContract.methods.increment().send({ from: this.state.account }).on('transactionHash', async (hash) => {
+        this.setState({hash: hash, action: 'Count Incremented', trxStatus: 'Pending'})
         this.showNotification()
 
         }).on('receipt', async (receipt) => {
@@ -128,7 +116,6 @@ class App extends Component {
       loading: false,
       isConnected: null,
       countContract: {},
-      callerContract: {},
       count: null,
       currentEthBalance: '0',
       hash: '0x0',
