@@ -3,6 +3,7 @@ import React, { Component } from 'react';
 import Web3 from 'web3';
 import Navbar from './components/Navbar.js';
 import Count from './abis/Count.json';
+import ContractCaller from './abis/ContractCaller.json';
 import Notification from './components/Notification.js';
 import Loading from './components/Loading.js';
 import ConnectionBanner from '@rimble/connection-banner';
@@ -46,30 +47,35 @@ class App extends Component {
     const networkId = await web3.eth.net.getId()
     this.setState({network: networkId})
 
-    if(this.state.network !== 3) {
-        let web3
-        this.setState({wrongNetwork: true})
-        let infuraURL = `https://ropsten.infura.io/v3/${process.env.REACT_APP_INFURA_API_KEY}`
-        web3 = new Web3(new Web3.providers.HttpProvider(infuraURL))
-        await this.setState({web3})
-    }
   }
 
   //Loads the data of the smart-contract
   async loadContractData() {
     let contractAdmin
-    let CountData = Count.networks[3]
+    let CountData = Count.networks[5777]
+    let ContractCallerData = ContractCaller.networks[5777]
     if(CountData) {
 
       //Load contract and set state
       const abi = Count.abi
       const address = CountData.address
-      const tokenContract = new this.state.web3.eth.Contract(abi, address)
-      await this.setState({ contract : tokenContract })
+      const countContract = new this.state.web3.eth.Contract(abi, address)
+      await this.setState({ countContract })
 
-      contractAdmin = await this.state.contract.methods.admin().call()
-      let count = await this.state.contract.methods.count().call()
-      this.setState({count, admin: contractAdmin})
+      contractAdmin = await this.state.countContract.methods.admin().call()
+      let count = await this.state.countContract.methods.count().call()
+      this.setState({count, admin: contractAdmin, countContractAddress: address})
+    }
+
+    //Get other contract data
+    if(ContractCallerData) {
+
+      //Load contract and set state
+      const abi = ContractCaller.abi
+      const address = ContractCallerData.address
+      const countContract = new this.state.web3.eth.Contract(abi, address)
+      await this.setState({ callerContract : countContract })
+
     }
 
   }
@@ -83,8 +89,8 @@ class App extends Component {
   async increment() {
     try {
       this.setState({confirmNum: 0})
-      this.state.contract.methods.increment().send({ from: this.state.account }).on('transactionHash', async (hash) => {
-        this.setState({hash: hash, action: 'Count Incremented', trxStatus: 'Pending'})
+      this.state.callerContract.methods.incrementsCount(this.state.countContractAddress).send({ from: this.state.account }).on('transactionHash', async (hash) => {
+        this.setState({hash: hash, action: 'Count Incremented from other Contract', trxStatus: 'Pending'})
         this.showNotification()
 
         }).on('receipt', async (receipt) => {
@@ -116,12 +122,13 @@ class App extends Component {
     this.state = {
       web3: null,
       account: null,
-      admin:'0x0',
+      admin: null,
       network: null,
       wrongNetwork: false,
       loading: false,
       isConnected: null,
-      contract: {},
+      countContract: {},
+      callerContract: {},
       count: null,
       currentEthBalance: '0',
       hash: '0x0',
