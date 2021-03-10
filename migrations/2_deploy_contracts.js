@@ -1,5 +1,5 @@
-var Count = artifacts.require("./Count.sol");
+var MoneyPolicy = artifacts.require("./MoneyPolicy.sol");
 
 module.exports = async function(deployer) {
-    await deployer.deploy(Count);
+    await deployer.deploy(MoneyPolicy);
 };
